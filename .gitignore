@@ -1,0 +1,35 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# leftover local SQLite file from before the Postgres migration — no
+# longer used, harmless to keep on disk, never worth committing
+server/data/
+
+# real secrets (Postgres connection string, Gmail App Password, session
+# secret) — see .env.example
+.env
+
+# Vercel CLI local project link/cache
+.vercel
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
