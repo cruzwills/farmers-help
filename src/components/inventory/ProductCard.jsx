@@ -10,7 +10,7 @@ import {
   STOCK_STATUS_META,
 } from "../../utils/inventoryHelpers";
 import StatusPill from "../common/StatusPill";
-import { interactiveCardSx } from "../../theme";
+import { clickableCardA11yProps, interactiveCardSx } from "../../theme";
 
 export default function ProductCard({ product }) {
   const navigate = useNavigate();
@@ -20,9 +20,12 @@ export default function ProductCard({ product }) {
   const expiryStatus = getProductExpiryStatus(product);
   const stockMeta = STOCK_STATUS_META[stockStatus];
 
+  const goToDetail = () => navigate(`/inventory/${product.id}`);
+
   return (
     <Card
-      onClick={() => navigate(`/inventory/${product.id}`)}
+      onClick={goToDetail}
+      {...clickableCardA11yProps(goToDetail)}
       sx={{
         display: "flex",
         overflow: "hidden",

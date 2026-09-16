@@ -4,15 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { CategoryIcon } from "../../utils/categoryIcons";
 import { CATEGORY_META } from "../../utils/inventoryHelpers";
 import StatusPill from "../common/StatusPill";
-import { interactiveCardSx } from "../../theme";
+import { clickableCardA11yProps, interactiveCardSx } from "../../theme";
 
 export default function AlertCard({ product, title, subtitle, pillLabel, pillColor, pillSoft }) {
   const navigate = useNavigate();
   const meta = CATEGORY_META[product.category];
+  const goToDetail = () => navigate(`/inventory/${product.id}`);
 
   return (
     <Card
-      onClick={() => navigate(`/inventory/${product.id}`)}
+      onClick={goToDetail}
+      {...clickableCardA11yProps(goToDetail)}
       sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.5, ...interactiveCardSx }}
     >
       <Box

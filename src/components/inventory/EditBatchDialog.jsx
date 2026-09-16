@@ -65,7 +65,7 @@ export default function EditBatchDialog({ open, onClose, product, batch, onSubmi
           error={duplicateBatchNo}
           helperText={duplicateBatchNo ? "This product already has a batch with that number." : ""}
         />
-        <Box sx={{ display: "flex", gap: 1.5 }}>
+        <Box sx={{ display: "flex", flexDirection: "row", gap: 1.5, "@media (max-width:359px)": { flexDirection: "column" } }}>
           <TextField
             label="Manufacture date"
             type="date"

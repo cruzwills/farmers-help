@@ -78,7 +78,10 @@ const theme = createTheme({
     },
     MuiChip: {
       styleOverrides: {
-        root: { fontWeight: 800, borderRadius: 8 },
+        // default MUI chip height (32px) is a bit small as a tap target for
+        // an outdoor/gloved-hand context — bump it up across the board
+        // (category filters, demo-login chips, role badges, etc.)
+        root: { fontWeight: 800, borderRadius: 8, minHeight: 40 },
         label: { paddingLeft: 10, paddingRight: 10 },
       },
     },
@@ -96,7 +99,11 @@ const theme = createTheme({
     },
     MuiIconButton: {
       styleOverrides: {
-        root: { borderRadius: 12 },
+        // ensure even "small" icon buttons (edit/delete/close/show-password)
+        // keep a comfortable tap target — the icon itself can stay compact,
+        // but the clickable area shouldn't drop below ~44px
+        root: { borderRadius: 12, minWidth: 44, minHeight: 44 },
+        sizeSmall: { minWidth: 40, minHeight: 40 },
       },
     },
     MuiBottomNavigationAction: {
@@ -130,6 +137,25 @@ const theme = createTheme({
   },
 });
 
+// spread into a clickable Card/Box that navigates on click (ProductCard,
+// AlertCard, StatCard, report tiles, etc.) so it's also reachable and
+// operable by keyboard — a bare onClick on a non-button element is invisible
+// to tab order and Enter/Space, which is exactly the kind of "not actually
+// interactive" gap this app shouldn't have on its most-used surfaces.
+export function clickableCardA11yProps(onClick) {
+  if (!onClick) return {};
+  return {
+    role: "button",
+    tabIndex: 0,
+    onKeyDown: (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onClick(e);
+      }
+    },
+  };
+}
+
 // spread into the sx of any clickable Card/Box for a consistent, subtle
 // hover/press affordance (desktop pointer hover + touch press feedback)
 export const interactiveCardSx = {
@@ -140,6 +166,10 @@ export const interactiveCardSx = {
     boxShadow: "0 4px 14px rgba(20, 83, 45, 0.10)",
   },
   "&:active": { transform: "scale(0.99)" },
+  "&:focus-visible": {
+    outline: `2.5px solid ${brand.primary}`,
+    outlineOffset: 2,
+  },
 };
 
 // for a clickable row inside a Card/list (no border of its own to

@@ -1,10 +1,11 @@
 import { Box, Card, Typography } from "@mui/material";
-import { interactiveCardSx } from "../../theme";
+import { clickableCardA11yProps, interactiveCardSx } from "../../theme";
 
 export default function StatCard({ icon, label, value, color, soft, onClick }) {
   return (
     <Card
       onClick={onClick}
+      {...clickableCardA11yProps(onClick)}
       sx={{
         p: 2,
         display: "flex",

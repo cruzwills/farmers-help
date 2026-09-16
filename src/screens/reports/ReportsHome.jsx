@@ -7,7 +7,7 @@ import ShoppingCartRoundedIcon from "@mui/icons-material/ShoppingCartRounded";
 import TuneRoundedIcon from "@mui/icons-material/TuneRounded";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import ReportGate from "../../components/reports/ReportGate";
-import { interactiveCardSx } from "../../theme";
+import { clickableCardA11yProps, interactiveCardSx } from "../../theme";
 
 const REPORTS = [
   {
@@ -68,10 +68,12 @@ export default function ReportsHome() {
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.25 }}>
           {REPORTS.map((r) => {
             const Icon = r.icon;
+            const goToReport = () => navigate(`/reports/${r.path}`);
             return (
               <Card
                 key={r.path}
-                onClick={() => navigate(`/reports/${r.path}`)}
+                onClick={goToReport}
+                {...clickableCardA11yProps(goToReport)}
                 sx={{ p: 2, display: "flex", alignItems: "center", gap: 1.5, ...interactiveCardSx }}
               >
                 <Box
