@@ -1,17 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Button, Card, Chip, IconButton, InputAdornment, TextField, Typography } from "@mui/material";
+import { Box, Button, Card, IconButton, InputAdornment, TextField, Typography } from "@mui/material";
 import VisibilityRoundedIcon from "@mui/icons-material/VisibilityRounded";
 import VisibilityOffRoundedIcon from "@mui/icons-material/VisibilityOffRounded";
 import { useInventoryActions } from "../context/InventoryContext";
-import { DEMO_SEED_PASSWORD } from "../data/products";
 import { brand } from "../theme";
-
-const DEMO_ACCOUNTS = [
-  { label: "Admin", username: "amina" },
-  { label: "Manager", username: "david" },
-  { label: "Staff", username: "grace" },
-];
 
 export default function Login() {
   const navigate = useNavigate();
@@ -39,12 +32,6 @@ export default function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
     attemptLogin(identifier, password);
-  };
-
-  const quickLogin = (accountIdentifier) => {
-    setIdentifier(accountIdentifier);
-    setPassword(DEMO_SEED_PASSWORD);
-    attemptLogin(accountIdentifier, DEMO_SEED_PASSWORD);
   };
 
   return (
@@ -113,27 +100,6 @@ export default function Login() {
           <Button type="submit" variant="contained" size="large" disabled={submitting || !identifier.trim() || !password}>
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
-        </Box>
-
-        <Box sx={{ border: "1.5px dashed", borderColor: "divider", borderRadius: "12px", p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
-          <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 700 }}>
-            DEMO ACCOUNTS (SEEDED FOR TESTING)
-          </Typography>
-          <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
-            {DEMO_ACCOUNTS.map((acc) => (
-              <Chip
-                key={acc.username}
-                label={`Log in as ${acc.label}`}
-                onClick={() => quickLogin(acc.username)}
-                disabled={submitting}
-                sx={{ fontWeight: 700, backgroundColor: "background.paper", border: "1.5px solid", borderColor: "divider" }}
-              />
-            ))}
-          </Box>
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>
-            Or type it yourself — username <code>amina</code>/<code>david</code>/<code>grace</code> (or
-            their email) with password {DEMO_SEED_PASSWORD}
-          </Typography>
         </Box>
       </Card>
       </Box>

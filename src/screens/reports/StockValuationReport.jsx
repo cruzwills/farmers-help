@@ -11,8 +11,7 @@ import StatCard from "../../components/common/StatCard";
 import ReportGate from "../../components/reports/ReportGate";
 import ReportHeader from "../../components/reports/ReportHeader";
 import { brand } from "../../theme";
-
-const money = (n) => `KES ${Math.round(n).toLocaleString("en-KE")}`;
+import { formatMoney as money } from "../../utils/currency";
 
 export default function StockValuationReport() {
   const { products } = useInventoryState();
@@ -142,7 +141,7 @@ export default function StockValuationReport() {
                     {r.product.name}
                   </Typography>
                   <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                    {r.qty} {r.product.unit} {r.hasPrice ? `× KES ${r.product.pricePerUnit}` : "· no price set"}
+                    {r.qty} {r.product.unit} {r.hasPrice ? `× ${money(r.product.pricePerUnit)}` : "· no price set"}
                   </Typography>
                 </Box>
                 <Typography sx={{ fontWeight: 900, flexShrink: 0 }}>{money(r.value)}</Typography>

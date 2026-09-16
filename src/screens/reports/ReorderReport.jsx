@@ -14,8 +14,7 @@ import EmptyState from "../../components/common/EmptyState";
 import ReportGate from "../../components/reports/ReportGate";
 import ReportHeader from "../../components/reports/ReportHeader";
 import { brand } from "../../theme";
-
-const money = (n) => `KES ${Math.round(n).toLocaleString("en-KE")}`;
+import { formatMoney as money } from "../../utils/currency";
 
 export default function ReorderReport() {
   const { products } = useInventoryState();
