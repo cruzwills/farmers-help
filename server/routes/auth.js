@@ -6,6 +6,28 @@ import { serializeUser } from "../lib/serialize.js";
 
 const router = Router();
 
+// Regenerates the session and explicitly waits for it to be written to the
+// store before resolving — rather than relying on express-session's
+// implicit "save automatically before res.end()" behavior. On Vercel,
+// express-session's own auto-save can lose the race against the serverless
+// function's execution environment being frozen right after the response is
+// sent, producing a real (observed) bug: login/activate would return 200
+// with a Set-Cookie, but an immediate follow-up request could 401 with
+// "Not signed in" because the session row hadn't actually committed to
+// Postgres yet. Awaiting save() here closes that window.
+function regenerateAndSaveSession(req, userId) {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err) => {
+      if (err) return reject(err);
+      req.session.userId = userId;
+      req.session.save((saveErr) => {
+        if (saveErr) return reject(saveErr);
+        resolve();
+      });
+    });
+  });
+}
+
 router.get("/me", (req, res) => {
   res.json({ user: serializeUser(req.user) });
 });
@@ -35,11 +57,12 @@ router.post("/login", async (req, res, next) => {
       return res.status(401).json({ error: "Incorrect password.", reason: "wrong-password" });
     }
 
-    req.session.regenerate((err) => {
-      if (err) return res.status(500).json({ error: "Could not start a session." });
-      req.session.userId = row.id;
-      res.json({ user: serializeUser(row) });
-    });
+    try {
+      await regenerateAndSaveSession(req, row.id);
+    } catch {
+      return res.status(500).json({ error: "Could not start a session." });
+    }
+    res.json({ user: serializeUser(row) });
   } catch (err) {
     next(err);
   }
@@ -76,11 +99,12 @@ router.post("/activate", async (req, res, next) => {
     const hash = bcrypt.hashSync(password, 10);
     await pool.query("UPDATE users SET status = 'active', password_hash = $1, invite_token = NULL WHERE id = $2", [hash, row.id]);
 
-    req.session.regenerate((err) => {
-      if (err) return res.status(500).json({ error: "Could not start a session." });
-      req.session.userId = row.id;
-      res.json({ user: serializeUser({ ...row, status: "active" }) });
-    });
+    try {
+      await regenerateAndSaveSession(req, row.id);
+    } catch {
+      return res.status(500).json({ error: "Could not start a session." });
+    }
+    res.json({ user: serializeUser({ ...row, status: "active" }) });
   } catch (err) {
     next(err);
   }

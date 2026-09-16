@@ -28,6 +28,19 @@ const PgSession = connectPgSimple(session);
 // so sessions must live in the database, not express-session's default
 // in-memory store (which would forget everyone on every cold start).
 app.set("trust proxy", 1);
+
+// Every response here is session-specific — Vercel's CDN otherwise applies
+// a default cacheable Cache-Control with no Vary: Cookie, so concurrent
+// requests to the same path can be coalesced into one shared response
+// regardless of which session's cookie each request actually carried. That
+// produced a real bug: a freshly authenticated request could occasionally
+// get served someone else's (or an earlier unauthenticated) cached 401.
+// no-store opts every API response out of that entirely.
+app.use((req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+
 app.use(express.json());
 app.use(
   session({

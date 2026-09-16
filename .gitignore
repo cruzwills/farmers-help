@@ -33,3 +33,13 @@ server/data/
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+.env*
+
+# Local AI-assistant tooling artifacts (agent skills pulled in by
+# `vercel integration add`, Claude Code scheduler state) — not part of
+# the app itself
+.agents/
+.claude/
+skills-lock.json
