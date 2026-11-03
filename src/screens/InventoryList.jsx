@@ -5,7 +5,7 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import SearchOffRoundedIcon from "@mui/icons-material/SearchOffRounded";
 import { useInventoryActions, useInventoryState, usePermission } from "../context/InventoryContext";
-import { CATEGORIES, CATEGORY_META } from "../utils/inventoryHelpers";
+import { getCategoryMeta, getProductCategories } from "../utils/inventoryHelpers";
 import { CategoryIcon } from "../utils/categoryIcons";
 import ProductCard from "../components/inventory/ProductCard";
 import ProductFormDialog from "../components/inventory/ProductFormDialog";
@@ -21,6 +21,7 @@ export default function InventoryList() {
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width:900px)");
   const canManageProducts = usePermission("manageProducts");
+  const categories = getProductCategories(products);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -89,8 +90,8 @@ export default function InventoryList() {
             borderColor: category === "All" ? "primary.dark" : "divider",
           }}
         />
-        {CATEGORIES.map((c) => {
-          const meta = CATEGORY_META[c];
+        {categories.map((c) => {
+          const meta = getCategoryMeta(c);
           const active = category === c;
           return (
             <Chip

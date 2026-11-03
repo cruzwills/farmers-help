@@ -128,15 +128,25 @@ Every entity is fully manageable, not just quantities:
   exact expected columns with example rows; each row is one batch — a
   brand-new product needs its details on its first row only, and every
   later row for it (more batches, or a restock of an existing product)
-  just needs the batch number, dates, and quantity. Rows are parsed and
-  validated client-side and previewed (with specific per-row error
-  reasons) before anything is committed — see
-  [src/utils/bulkImport.js](src/utils/bulkImport.js) and
+  just needs the batch number, dates, and quantity. New products can use
+  any non-empty category and unit of measurement entered in the sheet;
+  custom categories remain available in inventory filters and reports.
+  Column headers are matched flexibly (`Batch No.`, `Qty`, any
+  capitalization), and text dates are read day-first (`03/04/2026` is
+  3 April). Manufacture Date is optional, and a Quantity of 0 is allowed
+  (the batch is saved with no stock and no movement is logged). Rows are
+  parsed and validated client-side and previewed
+  (with specific per-row errors and warnings) — see
+  [src/utils/bulkImport.js](src/utils/bulkImport.js),
+  [src/utils/bulkImportRules.js](src/utils/bulkImportRules.js) and
   [src/components/inventory/BulkUploadDialog.jsx](src/components/inventory/BulkUploadDialog.jsx).
-  Only the valid rows are then sent to `POST /api/products/bulk-import`,
-  which does the actual inserts in one transaction
-  (`server/routes/products.js`) and returns real created/restocked
-  counts. File *parsing* stays client-side via SheetJS — note the
+  An upload is **all-or-nothing**: nothing can be imported until every
+  row is valid, and `POST /api/products/bulk-import` rechecks the rows
+  and saves them in one transaction (`server/routes/products.js`).
+  Uploading the same rows twice is stopped with a warning (`bulk_imports`
+  table) unless you confirm it's genuinely new stock. The limit is 5,000
+  rows per upload. Run `npm test` for the parsing and validation tests.
+  File *parsing* stays client-side via SheetJS — note the
   `xlsx` dependency in `package.json` points at SheetJS's own CDN
   tarball, not the npm registry version, because the npm one has
   unpatched high-severity CVEs and this feature parses untrusted

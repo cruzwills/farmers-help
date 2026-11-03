@@ -5,7 +5,7 @@ import ShoppingCartRoundedIcon from "@mui/icons-material/ShoppingCartRounded";
 import PaidRoundedIcon from "@mui/icons-material/PaidRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import { useInventoryState } from "../../context/InventoryContext";
-import { CATEGORY_META, getProductQty, getStockLevelStatus, STOCK_STATUS_META } from "../../utils/inventoryHelpers";
+import { getCategoryMeta, getProductQty, getStockLevelStatus, STOCK_STATUS_META } from "../../utils/inventoryHelpers";
 import { exportToCsv } from "../../utils/csv";
 import { CategoryIcon } from "../../utils/categoryIcons";
 import StatCard from "../../components/common/StatCard";
@@ -77,7 +77,7 @@ export default function ReorderReport() {
         ) : (
           <Card sx={{ overflow: "hidden" }}>
             {rows.map((r, i) => {
-              const meta = CATEGORY_META[r.product.category];
+              const meta = getCategoryMeta(r.product.category);
               const statusMeta = STOCK_STATUS_META[r.status];
               return (
                 <Box

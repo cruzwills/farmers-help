@@ -3,7 +3,7 @@ import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import { useNavigate } from "react-router-dom";
 import { CategoryIcon } from "../../utils/categoryIcons";
 import {
-  CATEGORY_META,
+  getCategoryMeta,
   getProductExpiryStatus,
   getProductQty,
   getStockLevelStatus,
@@ -14,7 +14,7 @@ import { clickableCardA11yProps, interactiveCardSx } from "../../theme";
 
 export default function ProductCard({ product }) {
   const navigate = useNavigate();
-  const meta = CATEGORY_META[product.category];
+  const meta = getCategoryMeta(product.category);
   const qty = getProductQty(product);
   const stockStatus = getStockLevelStatus(product);
   const expiryStatus = getProductExpiryStatus(product);

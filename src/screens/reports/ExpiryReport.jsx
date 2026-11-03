@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { Box, Card, MenuItem, TextField, Typography } from "@mui/material";
 import { useInventoryState } from "../../context/InventoryContext";
 import {
-  CATEGORIES,
-  CATEGORY_META,
+  getCategoryMeta,
+  getProductCategories,
   EXPIRY_STATUS_META,
   daysUntil,
   formatDate,
@@ -27,6 +27,7 @@ const BUCKET_LABEL = {
 export default function ExpiryReport() {
   const { products } = useInventoryState();
   const [category, setCategory] = useState("All");
+  const categories = getProductCategories(products);
 
   const batches = useMemo(() => {
     const all = getAllBatchesWithProduct(products);
@@ -68,7 +69,7 @@ export default function ExpiryReport() {
 
         <TextField select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} fullWidth>
           <MenuItem value="All">All categories</MenuItem>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <MenuItem key={c} value={c}>
               {c}
             </MenuItem>
@@ -87,7 +88,7 @@ export default function ExpiryReport() {
               </Box>
               <Card sx={{ overflow: "hidden" }}>
                 {rows.map((b, i) => {
-                  const catMeta = CATEGORY_META[b.product.category];
+                  const catMeta = getCategoryMeta(b.product.category);
                   const d = daysUntil(b.expiryDate);
                   return (
                     <Box

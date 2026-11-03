@@ -5,7 +5,7 @@ import SouthRoundedIcon from "@mui/icons-material/SouthRounded";
 import SwapVertRoundedIcon from "@mui/icons-material/SwapVertRounded";
 import EventBusyRoundedIcon from "@mui/icons-material/EventBusyRounded";
 import { useInventoryState } from "../../context/InventoryContext";
-import { CATEGORIES, addDays, today } from "../../utils/inventoryHelpers";
+import { addDays, getProductCategories, today } from "../../utils/inventoryHelpers";
 import { exportToCsv } from "../../utils/csv";
 import StatCard from "../../components/common/StatCard";
 import EmptyState from "../../components/common/EmptyState";
@@ -19,6 +19,7 @@ export default function MovementsReport() {
   const [from, setFrom] = useState(addDays(new Date(), -30));
   const [to, setTo] = useState(today());
   const [category, setCategory] = useState("All");
+  const categories = getProductCategories(products);
 
   const productCategory = useMemo(() => {
     const map = new Map();
@@ -100,7 +101,7 @@ export default function MovementsReport() {
         </Box>
         <TextField select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} fullWidth>
           <MenuItem value="All">All categories</MenuItem>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <MenuItem key={c} value={c}>
               {c}
             </MenuItem>

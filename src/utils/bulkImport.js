@@ -1,5 +1,7 @@
 import * as XLSX from "xlsx";
-import { CATEGORIES, UNITS, today } from "./inventoryHelpers";
+import { MAX_IMPORT_ROWS } from "./bulkImportRules.js";
+
+export { validateRows, toImportPayloadRows } from "./bulkImportRules.js";
 
 export const TEMPLATE_COLUMNS = [
   "Product Name",
@@ -17,17 +19,56 @@ export const TEMPLATE_COLUMNS = [
   "Quantity",
 ];
 
-// Required only the first time a product name appears in the file (a new
-// product); a repeat of the same name is treated as another batch for it
-// and only needs the batch columns.
-const NEW_PRODUCT_REQUIRED_COLUMNS = [
-  "Category",
-  "Active Ingredient",
-  "Unit",
-  "Pack Size",
-  "Manufacturer",
-  "Reorder Level",
-];
+const REQUIRED_COLUMNS = ["Product Name", "Batch Number", "Expiry Date", "Quantity"];
+const UNFORMATTED_COLUMNS = ["Reorder Level", "Price Per Unit", "Manufacture Date", "Expiry Date", "Quantity"];
+const HEADER_SCAN_ROWS = 25;
+const MIN_HEADER_MATCHES = 3;
+
+const COLUMN_ALIASES = {
+  productname: "Product Name",
+  product: "Product Name",
+  name: "Product Name",
+  item: "Product Name",
+  itemname: "Product Name",
+  category: "Category",
+  activeingredient: "Active Ingredient",
+  ingredient: "Active Ingredient",
+  formulation: "Formulation",
+  unit: "Unit",
+  uom: "Unit",
+  unitofmeasure: "Unit",
+  unitofmeasurement: "Unit",
+  packsize: "Pack Size",
+  pack: "Pack Size",
+  packaging: "Pack Size",
+  manufacturer: "Manufacturer",
+  reorderlevel: "Reorder Level",
+  reorderpoint: "Reorder Level",
+  reorder: "Reorder Level",
+  priceperunit: "Price Per Unit",
+  unitprice: "Price Per Unit",
+  price: "Price Per Unit",
+  batchnumber: "Batch Number",
+  batchno: "Batch Number",
+  batch: "Batch Number",
+  lotnumber: "Batch Number",
+  lotno: "Batch Number",
+  lot: "Batch Number",
+  manufacturedate: "Manufacture Date",
+  manufacturingdate: "Manufacture Date",
+  mfgdate: "Manufacture Date",
+  mfg: "Manufacture Date",
+  expirydate: "Expiry Date",
+  expiry: "Expiry Date",
+  expirationdate: "Expiry Date",
+  expdate: "Expiry Date",
+  exp: "Expiry Date",
+  quantity: "Quantity",
+  qty: "Quantity",
+};
+
+// A problem with the file as a whole; its message is written for the user.
+export class BulkFileError extends Error {}
 
 function addDaysFromNow(days) {
   const d = new Date();
@@ -35,7 +76,7 @@ function addDaysFromNow(days) {
   return d.toISOString().slice(0, 10);
 }
 
-export function buildTemplateWorkbook() {
+export function buildTemplateWorkbook(products = []) {
   const rows = [
     {
       "Product Name": "BioGrow 20SL",
@@ -67,8 +108,11 @@ export function buildTemplateWorkbook() {
       "Expiry Date": addDaysFromNow(400),
       Quantity: 20,
     },
-    {
-      "Product Name": "RoundClear 41SL",
+  ];
+  // a restock example only makes sense for a product that actually exists
+  if (products[0]) {
+    rows.push({
+      "Product Name": products[0].name,
       Category: "",
       "Active Ingredient": "",
       Formulation: "",
@@ -77,12 +121,12 @@ export function buildTemplateWorkbook() {
       Manufacturer: "",
       "Reorder Level": "",
       "Price Per Unit": "",
-      "Batch Number": "GLY-25C03",
+      "Batch Number": "RESTOCK-01",
       "Manufacture Date": addDaysFromNow(0),
       "Expiry Date": addDaysFromNow(500),
       Quantity: 25,
-    },
-  ];
+    });
+  }
   const sheet = XLSX.utils.json_to_sheet(rows, { header: TEMPLATE_COLUMNS });
   sheet["!cols"] = TEMPLATE_COLUMNS.map((c) => ({ wch: Math.max(14, c.length + 2) }));
   const workbook = XLSX.utils.book_new();
@@ -90,123 +134,106 @@ export function buildTemplateWorkbook() {
   return workbook;
 }
 
-export function downloadTemplate() {
-  XLSX.writeFile(buildTemplateWorkbook(), "farmers-help-stock-upload-template.xlsx");
+export function downloadTemplate(products) {
+  XLSX.writeFile(buildTemplateWorkbook(products), "farmers-help-stock-upload-template.xlsx");
+}
+
+// Finds a "Batch No." or "qty" column as readily as the template's own headers.
+function canonicalColumn(header) {
+  const key = String(header ?? "")
+    .replace(/\(.*?\)/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  return COLUMN_ALIASES[key] || null;
+}
+
+function mapHeaderRow(cells) {
+  const columns = new Map();
+  cells.forEach((header, position) => {
+    const column = canonicalColumn(header);
+    if (column && !columns.has(column)) columns.set(column, position);
+  });
+  return columns;
+}
+
+// A merged cell only stores its value in the top-left corner; copy it across
+// so a product name merged over several batch rows applies to each of them.
+function unmergeCells(sheet) {
+  (sheet["!merges"] || []).forEach((range) => {
+    const source = sheet[XLSX.utils.encode_cell(range.s)];
+    if (!source) return;
+    for (let r = range.s.r; r <= range.e.r; r += 1) {
+      for (let c = range.s.c; c <= range.e.c; c += 1) {
+        sheet[XLSX.utils.encode_cell({ r, c })] = source;
+      }
+    }
+  });
+}
+
+function findHeader(rows) {
+  let best = null;
+  rows.slice(0, HEADER_SCAN_ROWS).forEach((cells, index) => {
+    const columns = mapHeaderRow(cells);
+    if (columns.size >= MIN_HEADER_MATCHES && (!best || columns.size > best.columns.size)) best = { index, columns };
+  });
+  return best;
+}
+
+// Formatted text keeps identifiers as displayed (batch "00123"), except that
+// a long number in a General cell displays as 1.23457E+11.
+function textCell(rawValue, shownValue) {
+  if (typeof rawValue === "number" && /e\+/i.test(String(shownValue))) return String(rawValue);
+  return shownValue;
 }
 
 export async function parseWorkbookFile(file) {
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
-  const firstSheetName = workbook.SheetNames[0];
-  if (!firstSheetName) return [];
-  const sheet = workbook.Sheets[firstSheetName];
-  return XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false, dateNF: "yyyy-mm-dd" });
-}
+  // raw keeps CSV cells as typed: otherwise the library itself reads 03/04/2026
+  // as US-style before our day-first date parsing ever sees it
+  const isDelimitedText = /\.(csv|txt)$/i.test(file.name || "");
+  const workbook = XLSX.read(buffer, { type: "array", cellDates: true, raw: isDelimitedText });
 
-function normalizeDate(value) {
-  if (!value) return null;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
-  const str = String(value).trim();
-  if (!str) return null;
-  const parsed = new Date(str);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString().slice(0, 10);
-}
+  let foundAnyHeader = false;
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet["!ref"]) continue;
+    unmergeCells(sheet);
 
-function matchFromList(value, list) {
-  const str = String(value || "").trim();
-  if (!str) return null;
-  return list.find((item) => item.toLowerCase() === str.toLowerCase()) || null;
-}
+    // Values come unformatted: a formatted read turns 1000 into "1,000",
+    // rounds 12.5 up to "13" in a whole-number cell, and shifts dates.
+    const options = { header: 1, blankrows: true, defval: "" };
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { ...options, raw: true, UTC: true });
+    const shownRows = XLSX.utils.sheet_to_json(sheet, { ...options, raw: false, dateNF: "yyyy-mm-dd" });
+    const header = findHeader(shownRows);
+    if (!header) continue;
+    foundAnyHeader = true;
 
-function cell(row, key) {
-  const v = row[key];
-  return typeof v === "string" ? v.trim() : v;
-}
-
-// Validates rows sequentially so a second (or third...) row for a brand
-// new product — introduced earlier in the SAME file — only needs its
-// batch columns, matching how a real distributor would fill this in
-// (list every batch, only describe the product once).
-export function validateRows(rawRows, existingProducts) {
-  const knownNames = new Set(existingProducts.map((p) => p.name.trim().toLowerCase()));
-
-  return rawRows.map((row, index) => {
-    const errors = [];
-    const rowNumber = index + 2; // header is row 1 in the spreadsheet
-    const name = String(cell(row, "Product Name") || "").trim();
-    if (!name) errors.push("Product Name is required");
-
-    const nameKey = name.toLowerCase();
-    const isNewProduct = Boolean(name) && !knownNames.has(nameKey);
-
-    const batchNo = String(cell(row, "Batch Number") || "").trim();
-    if (!batchNo) errors.push("Batch Number is required");
-
-    const qtyRaw = cell(row, "Quantity");
-    const qty = Number(qtyRaw);
-    if (qtyRaw === "" || qtyRaw === undefined || Number.isNaN(qty) || qty <= 0) {
-      errors.push("Quantity must be a positive number");
+    const missing = REQUIRED_COLUMNS.filter((column) => !header.columns.has(column));
+    if (missing.length) {
+      throw new BulkFileError(`Sheet "${sheetName}" is missing these columns: ${missing.join(", ")}. Download the template to see the expected layout.`);
     }
 
-    const expiryDate = normalizeDate(cell(row, "Expiry Date"));
-    if (!expiryDate) errors.push("Expiry Date is missing or not a valid date");
-
-    const mfgDate = normalizeDate(cell(row, "Manufacture Date")) || today();
-
-    let newProductData = null;
-    if (isNewProduct) {
-      const category = matchFromList(cell(row, "Category"), CATEGORIES);
-      if (!category) errors.push(`Category must be one of ${CATEGORIES.join(", ")} (first row for a new product)`);
-      const unit = matchFromList(cell(row, "Unit"), UNITS);
-      if (!unit) errors.push(`Unit must be one of ${UNITS.join(", ")} (first row for a new product)`);
-      const activeIngredient = String(cell(row, "Active Ingredient") || "").trim();
-      const packSize = String(cell(row, "Pack Size") || "").trim();
-      const manufacturer = String(cell(row, "Manufacturer") || "").trim();
-      const reorderLevelRaw = cell(row, "Reorder Level");
-      const reorderLevel = Number(reorderLevelRaw);
-      NEW_PRODUCT_REQUIRED_COLUMNS.forEach((col) => {
-        const val = cell(row, col);
-        if (val === "" || val === undefined || val === null) {
-          if (col !== "Category" && col !== "Unit") errors.push(`${col} is required (first row for a new product)`);
-        }
+    const firstRowNumber = XLSX.utils.decode_range(sheet["!ref"]).s.r + 1;
+    const rows = [];
+    for (let i = header.index + 1; i < rawRows.length; i += 1) {
+      const row = { rowNumber: firstRowNumber + i };
+      let hasContent = false;
+      header.columns.forEach((position, column) => {
+        const rawValue = rawRows[i]?.[position] ?? "";
+        const shownValue = shownRows[i]?.[position] ?? "";
+        row[column] = UNFORMATTED_COLUMNS.includes(column) ? rawValue : textCell(rawValue, shownValue);
+        if (String(row[column]).trim() !== "") hasContent = true;
       });
-      if (reorderLevelRaw !== "" && (Number.isNaN(reorderLevel) || reorderLevel <= 0)) {
-        errors.push("Reorder Level must be a positive number");
-      }
-      const priceRaw = cell(row, "Price Per Unit");
-      const pricePerUnit = priceRaw === "" || priceRaw === undefined ? undefined : Number(priceRaw);
-      if (priceRaw !== "" && priceRaw !== undefined && Number.isNaN(pricePerUnit)) {
-        errors.push("Price Per Unit must be a number if provided");
-      }
-
-      newProductData = {
-        name,
-        category: category || "Herbicide",
-        activeIngredient,
-        formulation: String(cell(row, "Formulation") || "").trim() || "Other",
-        unit: unit || "L",
-        packSize,
-        manufacturer,
-        reorderLevel: Number.isNaN(reorderLevel) || reorderLevel <= 0 ? 0 : reorderLevel,
-        pricePerUnit,
-      };
+      if (hasContent) rows.push(row);
     }
+    if (rows.length > MAX_IMPORT_ROWS) {
+      throw new BulkFileError(`That file has ${rows.length} rows; the limit is ${MAX_IMPORT_ROWS} per upload. Split it into smaller files.`);
+    }
+    return rows;
+  }
 
-    const valid = errors.length === 0;
-    if (valid && isNewProduct) knownNames.add(nameKey);
-
-    return {
-      rowNumber,
-      name,
-      batchNo,
-      qty,
-      expiryDate,
-      mfgDate,
-      isNewProduct,
-      newProductData,
-      errors,
-      valid,
-    };
-  });
+  if (!foundAnyHeader) {
+    throw new BulkFileError(`Couldn't find the column headers (such as ${REQUIRED_COLUMNS.join(", ")}). Download the template to see the expected layout.`);
+  }
+  return [];
 }

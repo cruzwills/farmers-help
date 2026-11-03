@@ -10,7 +10,7 @@ import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import { useInventoryActions, useInventoryState, usePermission } from "../context/InventoryContext";
 import {
-  CATEGORY_META,
+  getCategoryMeta,
   STOCK_STATUS_META,
   getProductQty,
   getStockLevelStatus,
@@ -58,11 +58,12 @@ export default function ProductDetail() {
     );
   }
 
-  const meta = CATEGORY_META[product.category];
+  const meta = getCategoryMeta(product.category);
   const qty = getProductQty(product);
   const stockStatus = getStockLevelStatus(product);
   const stockMeta = STOCK_STATUS_META[stockStatus];
   const sortedBatches = sortBatchesByExpiry(product.batches);
+  const firstInStock = sortedBatches.find((b) => b.qty > 0);
   const productMovements = movements.filter((m) => m.productId === product.id).slice(0, 6);
 
   return (
@@ -202,7 +203,7 @@ export default function ProductDetail() {
               key={b.batchNo}
               batch={b}
               unit={product.unit}
-              recommended={i === 0 && b.qty > 0}
+              recommended={b === firstInStock}
               onEdit={canManageBatches ? () => setEditingBatch(b) : undefined}
               onDelete={canManageBatches ? () => setDeletingBatch(b) : undefined}
             />

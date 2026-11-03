@@ -107,7 +107,16 @@ export function InventoryProvider({ children }) {
       stockIn: runAction(({ productId, ...payload }) => api.stockIn(productId, payload), refreshInventory),
       stockOut: runAction(({ productId, ...payload }) => api.stockOut(productId, payload), refreshInventory),
       addProduct: runAction((payload) => api.addProduct(payload), refreshInventory),
-      bulkImport: runAction((payload) => api.bulkImport(payload), refreshInventory),
+      bulkImport: async (payload) => {
+        const result = await api.bulkImport(payload); // the dialog shows failures inline
+        // the stock is already saved here, so a failed refresh mustn't look like a failed import
+        try {
+          await refreshInventory();
+        } catch {
+          setError("Your upload was saved, but the list couldn't refresh. Reload the page to see it.");
+        }
+        return result;
+      },
       updateProduct: runAction(({ productId, updates }) => api.updateProduct(productId, updates), refreshInventory),
       deleteProduct: runAction(({ productId }) => api.deleteProduct(productId), refreshInventory),
       updateBatch: runAction(

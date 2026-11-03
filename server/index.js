@@ -41,6 +41,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// bulk uploads can run to thousands of rows; the default 100kb limit would
+// reject anything past a few hundred
+app.use("/api/products/bulk-import", express.json({ limit: "10mb" }));
 app.use(express.json());
 app.use(
   session({
@@ -65,6 +68,8 @@ app.use("/api/products", productRoutes);
 app.use("/api/movements", movementRoutes);
 
 app.use((err, req, res, _next) => {
+  if (err.status === 413) return res.status(413).json({ error: "That upload is too large. Split it into smaller files." });
+  if (err.status === 400) return res.status(400).json({ error: "The server could not read that request." });
   console.error(err);
   res.status(500).json({ error: "Something went wrong on the server." });
 });
