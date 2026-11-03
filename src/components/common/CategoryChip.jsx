@@ -1,10 +1,9 @@
 import { Chip } from "@mui/material";
-import { CATEGORY_META } from "../../utils/inventoryHelpers";
+import { getCategoryMeta } from "../../utils/inventoryHelpers";
 import { CategoryIcon } from "../../utils/categoryIcons";
 
 export default function CategoryChip({ category, size = "small" }) {
-  const meta = CATEGORY_META[category];
-  if (!meta) return null;
+  const meta = getCategoryMeta(category);
   return (
     <Chip
       size={size}

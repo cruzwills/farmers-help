@@ -7,6 +7,16 @@ export const CATEGORY_META = {
   Fertilizer: { color: "#8B5E34", soft: "#F1E9DE", icon: "Yard", label: "Fertilizer" },
 };
 
+const DEFAULT_CATEGORY_META = { color: "#3F7D3A", soft: "#E7F0E4", icon: "Grass" };
+
+export function getCategoryMeta(category) {
+  return CATEGORY_META[category] || { ...DEFAULT_CATEGORY_META, label: category || "Other" };
+}
+
+export function getProductCategories(products) {
+  return [...new Set([...CATEGORIES, ...products.map((product) => product.category).filter(Boolean)])];
+}
+
 export const CATEGORY_PREFIX = {
   Herbicide: "HRB",
   Insecticide: "INS",

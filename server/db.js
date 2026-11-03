@@ -81,6 +81,14 @@ const SCHEMA_SQL = `
     send_error TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS bulk_imports (
+    fingerprint TEXT PRIMARY KEY,
+    file_name TEXT,
+    row_count INTEGER NOT NULL,
+    imported_by TEXT,
+    imported_at TEXT NOT NULL
+  );
+
   CREATE SEQUENCE IF NOT EXISTS rank_seq;
 `;
 

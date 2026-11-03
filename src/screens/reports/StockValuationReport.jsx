@@ -4,7 +4,7 @@ import PaidRoundedIcon from "@mui/icons-material/PaidRounded";
 import Inventory2RoundedIcon from "@mui/icons-material/Inventory2Rounded";
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import { useInventoryState } from "../../context/InventoryContext";
-import { CATEGORIES, CATEGORY_META, getProductQty, getProductValue } from "../../utils/inventoryHelpers";
+import { getCategoryMeta, getProductCategories, getProductQty, getProductValue } from "../../utils/inventoryHelpers";
 import { exportToCsv } from "../../utils/csv";
 import { CategoryIcon } from "../../utils/categoryIcons";
 import StatCard from "../../components/common/StatCard";
@@ -33,13 +33,13 @@ export default function StockValuationReport() {
   const missingPriceCount = rows.filter((r) => !r.hasPrice).length;
 
   const byCategory = useMemo(() => {
-    return CATEGORIES.map((c) => {
+    return getProductCategories(products).map((c) => {
       const catRows = rows.filter((r) => r.product.category === c);
       const value = catRows.reduce((sum, r) => sum + r.value, 0);
       const qty = catRows.reduce((sum, r) => sum + r.qty, 0);
       return { category: c, value, qty, skus: catRows.length };
     }).filter((c) => c.skus > 0);
-  }, [rows]);
+  }, [rows, products]);
 
   const sortedRows = useMemo(() => {
     const copy = [...rows];
@@ -91,7 +91,7 @@ export default function StockValuationReport() {
           </Typography>
           <Card sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
             {byCategory.map((c) => {
-              const meta = CATEGORY_META[c.category];
+              const meta = getCategoryMeta(c.category);
               const pct = totalValue > 0 ? (c.value / totalValue) * 100 : 0;
               return (
                 <Box key={c.category}>

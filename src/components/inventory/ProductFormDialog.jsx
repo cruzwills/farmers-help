@@ -119,7 +119,7 @@ export default function ProductFormDialog({ open, onClose, mode = "create", init
         <TextField label="Product name" placeholder="e.g. RoundClear 41SL" value={form.name} onChange={set("name")} fullWidth autoFocus required />
         <Box sx={{ display: "flex", gap: 1.5 }}>
           <TextField select label="Category" value={form.category} onChange={set("category")} fullWidth disabled={mode === "edit"}>
-            {CATEGORIES.map((c) => (
+            {[...new Set([...CATEGORIES, ...(form.category ? [form.category] : [])])].map((c) => (
               <MenuItem key={c} value={c}>
                 {c}
               </MenuItem>
@@ -143,7 +143,7 @@ export default function ProductFormDialog({ open, onClose, mode = "create", init
         />
         <Box sx={{ display: "flex", gap: 1.5 }}>
           <TextField select label="Stock unit" value={form.unit} onChange={set("unit")} fullWidth>
-            {UNITS.map((u) => (
+            {[...new Set([...UNITS, ...(form.unit ? [form.unit] : [])])].map((u) => (
               <MenuItem key={u} value={u}>
                 {u}
               </MenuItem>

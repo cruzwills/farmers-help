@@ -2,13 +2,13 @@ import { Box, Card, Typography } from "@mui/material";
 import ChevronRightRoundedIcon from "@mui/icons-material/ChevronRightRounded";
 import { useNavigate } from "react-router-dom";
 import { CategoryIcon } from "../../utils/categoryIcons";
-import { CATEGORY_META } from "../../utils/inventoryHelpers";
+import { getCategoryMeta } from "../../utils/inventoryHelpers";
 import StatusPill from "../common/StatusPill";
 import { clickableCardA11yProps, interactiveCardSx } from "../../theme";
 
 export default function AlertCard({ product, title, subtitle, pillLabel, pillColor, pillSoft }) {
   const navigate = useNavigate();
-  const meta = CATEGORY_META[product.category];
+  const meta = getCategoryMeta(product.category);
   const goToDetail = () => navigate(`/inventory/${product.id}`);
 
   return (
